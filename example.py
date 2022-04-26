@@ -4,13 +4,11 @@ import numpy as np
 import os
 from tqdm import tqdm
 
-print("start")
 os.chdir("data")
 df_1 = pd.read_pickle("data.pkl")
-text_list = df_1["content"].values.tolist()[:50]
-label_list = df_1["child_age"].values.tolist()[:50]
-created_list = df_1["created"].values.tolist()[:50]
-print("finish load")
+text_list = df_1["content"].values.tolist()
+label_list = df_1["child_age"].values.tolist()
+created_list = df_1["created"].values.tolist()
 
 flat_label =  [x for row in label_list for x in row]
 min_age = min(flat_label)
@@ -32,9 +30,8 @@ trainloader = make_dataset.make_dataloader(*train_set, size=max_age, batch_size=
 valiloader = make_dataset.make_dataloader(*vali_set, size=max_age, batch_size=8, max_length=64)
 valiloader_2 = make_dataset.make_dataloader(*vali_set, size=max_age, batch_size=8, max_length=64, mldl = False)
 testloader = make_dataset.make_dataloader(*test_set, size=max_age, batch_size=8, max_length=64, mldl = False)
-print("finish make dataloader")
 
-result_path = "/gs/hs0/tga-nakatalab/home/higashi/pred_age/result"
+result_path = "/result"
 algorithm = model.Algorithm(numlabel=max_age, result_path = result_path, max_length = 64, period = 2)
 ep=algorithm.train(testloader, valiloader, lr = 2e-5, grad_accum_step=2, early_stop_step=1)
 model_path = result_path+f"/model{ep}.pth"
