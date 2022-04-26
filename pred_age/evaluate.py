@@ -1,8 +1,9 @@
 import scipy.signal
 import numpy as np
 from tqdm import tqdm
+import math
 
-def evaluate(pred, label, height):
+def evaluation(pred, label, height):
     pred=np.append(pred,0)
     pred=np.append(0,pred)
     age_list,_=scipy.signal.find_peaks(pred, height=height, threshold=None, distance=9, prominence=None, width=None, wlen=None, rel_height=0.5, plateau_size=None)
@@ -17,13 +18,31 @@ def evaluate(pred, label, height):
     age_mae = age_mae/len(age_list)
     num_mae = np.abs(len(labelindex)-len(age_list))
     return age_mae, num_mae
-        
+
+def evaluate(pred, label, height):
+    age_mae=0
+    age_rmse=0
+    num_mae=0
+    num_rmse=0
+    for i,j in zip(tqdm(pred),label):
+        x, y=evaluation(i,j,height)
+        age_mae += x
+        age_rmse += x**2
+        num_mae += y
+        num_rmse += y**2
+    age_mae=age_mae/len(pred)
+    age_rmse=math.sqrt(age_rmse/len(pred))
+    num_mae=num_mae/len(pred)
+    num_rmse=math.sqrt(num_rmse/len(pred))
+    return age_mae, age_rmse, num_mae, num_rmse
+
+
 def make_thresh(pred_vali, label_vali):
     min_mae=10000
     for t in np.arange(0,1.1,0.1):
         num_mae=0
         for i,j in zip(tqdm(pred_vali),label_vali):
-            x=evaluate(i,j,t)
+            _, x=evaluation(i,j,t)
             num_mae += x
         num_mae=num_mae/len(pred_vali)
         print(f"num_mae:{num_mae}")
@@ -37,7 +56,7 @@ def make_thresh(pred_vali, label_vali):
     for q in np.arange(0,0.11,0.01):
         num_mae=0
         for i,j in zip(tqdm(pred_vali),label_vali):
-            _, x=evaluate(i,j,ikiti+q)
+            _, x=evaluation(i,j,ikiti+q)
             num_mae += x
         num_mae=num_mae/len(pred_vali)
         print(f"num_mae:{num_mae}")
@@ -50,7 +69,7 @@ def make_thresh(pred_vali, label_vali):
         for q in np.arange(0.01,0.11,0.01):
             num_mae=0
             for i,j in zip(tqdm(pred_vali),label_vali):
-                _, x=evaluate(i,j,ikiti-q)
+                _, x=evaluation(i,j,ikiti-q)
                 num_mae += x
             num_mae=num_mae/len(pred_vali)
             print(f"num_mae:{num_mae}")

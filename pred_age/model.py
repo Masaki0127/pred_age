@@ -26,8 +26,10 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 class Bertmulticlassficationmodel(nn.Module):
-    def __init__(self, numlabel, model_name):
+    def __init__(self, numlabel, model_name, max_length, period):
         super().__init__()
+        self.max_length = max_length
+        self.period = period
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.bert_model = BertModel.from_pretrained(model_name)
         self.pos_encode = PositionalEncoding()
@@ -37,9 +39,9 @@ class Bertmulticlassficationmodel(nn.Module):
         self.linear = nn.Linear(768, numlabel)
 
     def forward(self, text, created_list, padding):
-        text = torch.reshape(text,(-1, 3, 128))
+        text = torch.reshape(text,(-1, 3, self.max_length))
         x = self.bert_model(input_ids=text[:,0,:], token_type_ids=text[:,1,:], attention_mask=text[:,2,:])[0][:,0,:] #BERTの最終層のCLSを出力
-        x = torch.reshape(x,(-1,15,768))
+        x = torch.reshape(x,(-1,self.period,768))
         x = self.pos_encode(x, created_list)
         x = torch.mul(x,torch.unsqueeze(padding,2))
         x = self.transformer_encoder(x, mask=None, src_key_padding_mask=(1-padding).bool())
@@ -49,20 +51,22 @@ class Bertmulticlassficationmodel(nn.Module):
         return output
 
 class Algorithm():
-    def __init__(self, numlabel, model_name, result_path, model_path = None, multi_gpu = False):
+    def __init__(self, numlabel, model_name='cl-tohoku/bert-base-japanese-v2', max_length = 512, period = 15, result_path=None, model_path = None, multi_gpu = False):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') #GPUがつかえたらGPUを利用
-        self.model = Bertmulticlassficationmodel(numlabel, model_name)
+        self.model = Bertmulticlassficationmodel(numlabel, model_name, max_length, period)
         if model_path:
-            self.model = torch.load(model_path)['model_state_dict']
+            self.model.load_state_dict(torch.load(model_path)["model_state_dict"])
         if multi_gpu > 0:
             self.model = nn.DataParallel(self.model,range(multi_gpu))
+        self.multi_gpu = multi_gpu
         self.loss_list = []
         self.val_list = []
-        self.result_dir = result_path #保存場所
-        if not os.path.exists(self.result_dir): #保存場所が無かったら作成
-            os.mkdir(self.result_dir)
+        if result_path:
+            self.result_dir = result_path #保存場所
+            if not os.path.exists(self.result_dir): #保存場所が無かったら作成
+                os.mkdir(self.result_dir)
 
-    def train(self, encoder, valid, lr, grad_accum_step=8, early_stop_step=5):
+    def train(self, encoder, valid, lr, grad_accum_step=1, early_stop_step=5):
         self.model.to(self.device)
         optimizer = torch.optim.AdamW(params=self.model.parameters(), lr=lr) #optimizer
         criterion = nn.BCEWithLogitsLoss()
@@ -94,6 +98,7 @@ class Algorithm():
 
             #検証 & early_stop
             score = self.loss_exact(valid)
+            self.val_list.append(score)
             if min_score > score:
                 min_score = score
                 s = 0
@@ -101,11 +106,15 @@ class Algorithm():
                 s+=1
             if s==early_stop_step:
                 early_stop = False
-            save_path = self.result_dir+"model{ep}.pth"
-            torch.save({"epoch": ep, "model_state_dict": self.model.module.state_dict(), "optimizer_state_dict": optimizer.state_dict()}, save_path)
+            save_path = self.result_dir+f"/model{ep}.pth"
+            if self.multi_gpu > 0:
+                torch.save({"epoch": ep, "model_state_dict": self.model.module.state_dict(), "optimizer_state_dict": optimizer.state_dict()}, save_path)
+            else:
+                torch.save({"epoch": ep, "model_state_dict": self.model.state_dict(), "optimizer_state_dict": optimizer.state_dict()}, save_path)
             print(running_loss/len(encoder))
             ep+=1
         print(f"train_loss:{self.loss_list}")
+        print(f"validation_loss:{self.val_list}")
         print('Finished Training')
         print(f'Saved checkpoint at {save_path}')
         return ep-(early_stop_step+1)
@@ -129,6 +138,7 @@ class Algorithm():
 
     @torch.no_grad()
     def predict(self, test):
+        self.model.to(self.device)
         self.model.eval()
         pred_list=None
         for data in tqdm(test):
