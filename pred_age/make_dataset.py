@@ -1,5 +1,4 @@
 from torch.utils.data import Dataset, DataLoader
-from transformers import BertJapaneseTokenizer
 import torch
 from sklearn.model_selection import train_test_split
 from pred_age import label_tr
@@ -40,7 +39,7 @@ def to_token(x,max_length, tokenizer):
     x_list=[x['input_ids'],x['token_type_ids'],x['attention_mask']]
     return torch.stack(x_list, dim=1)
 
-def make_dataloader(text, created, padding, label, size, batch_size, max_length = 512, tokenizer=BertJapaneseTokenizer.from_pretrained('cl-tohoku/bert-base-japanese-v2'), shuffle=True, mldl=True, std=1, scaling=True):
+def make_dataloader(text, created, padding, label, size, batch_size, tokenizer, max_length = 512, shuffle=True, mldl=True, std=1, scaling=True):
     if mldl:
         label = label_tr.MLDL(label, size, std=std,scaling=scaling)
     else:

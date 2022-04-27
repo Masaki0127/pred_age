@@ -39,20 +39,18 @@ class to_padding():
         self.period = period
     
     def pad_data(self):
-        text = [text_pad(i, self.period) for i in self.text]
-        created = torch.stack([created_pad(i, self.period) for i in self.created])
-        padding = torch.stack([make_pad(i, self.period) for i in self.text])
+        text = self.pad_text()
+        created = self.pad_created()
+        padding = self.make_padding()
         return text, created, padding
 
     def pad_text(self):
-        text = [text_pad(i, self.period) for i in self.text]
-        return text
+        return [text_pad(i, self.period) for i in self.text]
 
     def pad_created(self):
-        created = torch.stack([created_pad(i, self.period) for i in self.created])
-        return created
+        return torch.stack([created_pad(i, self.period) for i in self.created])
 
     def make_padding(self):
-        padding = torch.stack([make_pad(i, self.period) for i in self.text])
-        return padding
+        return torch.stack([make_pad(i, self.period) for i in self.text])
+        
 

@@ -45,13 +45,11 @@ def make_thresh(pred_vali, label_vali):
             _, x=evaluation(i,j,t)
             num_mae += x
         num_mae=num_mae/len(pred_vali)
-        print(f"num_mae:{num_mae}")
         if min_mae>num_mae:
             min_mae=num_mae
             ikiti=t
             continue
         break
-    print("次の桁")
     min_mae=10000
     for q in np.arange(0,0.11,0.01):
         num_mae=0
@@ -59,7 +57,6 @@ def make_thresh(pred_vali, label_vali):
             _, x=evaluation(i,j,ikiti+q)
             num_mae += x
         num_mae=num_mae/len(pred_vali)
-        print(f"num_mae:{num_mae}")
         if min_mae>num_mae:
             min_mae=num_mae
             ikiti2=q
@@ -72,7 +69,6 @@ def make_thresh(pred_vali, label_vali):
                 _, x=evaluation(i,j,ikiti-q)
                 num_mae += x
             num_mae=num_mae/len(pred_vali)
-            print(f"num_mae:{num_mae}")
             if min_mae>num_mae:
                 min_mae=num_mae
                 ikiti2=-q

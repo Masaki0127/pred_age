@@ -1,4 +1,5 @@
 from pred_age import data_make, model, make_dataset, evaluate
+from transformers import BertJapaneseTokenizer
 import pandas as pd
 import numpy as np
 import os
@@ -26,10 +27,11 @@ max_age = max(flat_label)+1
 padding = data_make.to_padding(text_list, created_list, period=2)
 text_list, created_list, pad = padding.pad_data()
 train_set ,vali_set, test_set = make_dataset.split_data(text_list, created_list, pad, label_list, random_state=1)
-trainloader = make_dataset.make_dataloader(*train_set, size=max_age, batch_size=4, max_length=64)
-valiloader = make_dataset.make_dataloader(*vali_set, size=max_age, batch_size=8, max_length=64)
-valiloader_2 = make_dataset.make_dataloader(*vali_set, size=max_age, batch_size=8, max_length=64, mldl = False)
-testloader = make_dataset.make_dataloader(*test_set, size=max_age, batch_size=8, max_length=64, mldl = False)
+tokenizer = BertJapaneseTokenizer.from_pretrained('cl-tohoku/bert-base-japanese-v2')
+trainloader = make_dataset.make_dataloader(*train_set, size=max_age, batch_size=4, tokenizer=tokenizer, max_length=64)
+valiloader = make_dataset.make_dataloader(*vali_set, size=max_age, batch_size=8, tokenizer=tokenizer, max_length=64)
+valiloader_2 = make_dataset.make_dataloader(*vali_set, size=max_age, batch_size=8, tokenizer=tokenizer, max_length=64, mldl = False)
+testloader = make_dataset.make_dataloader(*test_set, size=max_age, batch_size=8, tokenizer=tokenizer, max_length=64, mldl = False)
 
 result_path = "/result"
 algorithm = model.Algorithm(numlabel=max_age, result_path = result_path, max_length = 64, period = 2)
