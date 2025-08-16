@@ -2,3 +2,5 @@ result
 .venv
 .python-version
 __pycache__
+pred_age.egg-info
+.pytest_cache
