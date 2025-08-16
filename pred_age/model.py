@@ -1,5 +1,6 @@
 import math
 import os
+from typing import Tuple
 
 import numpy as np
 import torch
@@ -10,7 +11,7 @@ from transformers import BertModel
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model=768, dropout=0.2):
+    def __init__(self, d_model: int = 768, dropout: float = 0.2):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
         pe = torch.zeros(50, d_model)
@@ -23,13 +24,13 @@ class PositionalEncoding(nn.Module):
         pe = pe.unsqueeze(0).transpose(0, 1)
         self.register_buffer("pe", pe)
 
-    def forward(self, x, created_list):
+    def forward(self, x: torch.Tensor, created_list: torch.Tensor) -> torch.Tensor:
         x = x + torch.squeeze(self.pe[created_list, :])
         return self.dropout(x)
 
 
 class Bertmulticlassficationmodel(nn.Module):
-    def __init__(self, numlabel, model_name, max_length, period):
+    def __init__(self, numlabel: int, model_name: str, max_length: int, period: int):
         super().__init__()
         self.max_length = max_length
         self.period = period
@@ -43,7 +44,9 @@ class Bertmulticlassficationmodel(nn.Module):
         self.dropout1 = nn.Dropout(p=0.2)
         self.linear = nn.Linear(768, numlabel)
 
-    def forward(self, text, created_list, padding):
+    def forward(
+        self, text: torch.Tensor, created_list: torch.Tensor, padding: torch.Tensor
+    ) -> torch.Tensor:
         text = torch.reshape(text, (-1, 3, self.max_length))
         x = self.bert_model(
             input_ids=text[:, 0, :],
@@ -75,13 +78,13 @@ class Bertmulticlassficationmodel(nn.Module):
 class Algorithm:
     def __init__(
         self,
-        numlabel,
-        model_name="cl-tohoku/bert-base-japanese-v2",
-        max_length=512,
-        period=15,
-        result_path=None,
-        model_path=None,
-        multi_gpu=False,
+        numlabel: int,
+        model_name: str = "cl-tohoku/bert-base-japanese-v2",
+        max_length: int = 512,
+        period: int = 15,
+        result_path: str | None = None,
+        model_path: str | None = None,
+        multi_gpu: int | bool = False,
     ):
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
@@ -101,7 +104,14 @@ class Algorithm:
             # 保存場所が無かったら作成（中間ディレクトリも含めて安全に作成）
             os.makedirs(self.result_dir, exist_ok=True)
 
-    def train(self, encoder, valid, lr, grad_accum_step=1, early_stop_step=5):
+    def train(
+        self,
+        encoder,
+        valid,
+        lr: float,
+        grad_accum_step: int = 1,
+        early_stop_step: int = 5,
+    ):
         self.model.to(self.device)
         optimizer = torch.optim.AdamW(
             params=self.model.parameters(), lr=lr
@@ -110,6 +120,7 @@ class Algorithm:
         min_score = 10000  # early_stopに使う
         early_stop = True
         ep = 1
+        s = 0
         while early_stop:
             print(f"epoch:{ep}")
             self.model.train()  # モデルを訓練モードに
@@ -188,7 +199,7 @@ class Algorithm:
         return vali_loss / len(test)
 
     @torch.no_grad()
-    def predict(self, test):
+    def predict(self, test) -> Tuple[np.ndarray, np.ndarray]:
         self.model.to(self.device)
         self.model.eval()
         pred_list = None
