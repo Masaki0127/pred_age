@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 from transformers import BertJapaneseTokenizer
 
-from pred_age import data_make, evaluate, make_dataset, model
+import pred_age.evaluate as evaluate_module
+from pred_age import data_make, make_dataset, model
 
 
 def build_list_cell_dataframe() -> pd.DataFrame:
@@ -57,7 +58,7 @@ def test_train() -> None:
     flat_label = [x for row in label_list for x in row]
     max_age = max(flat_label) + 1
 
-    padding = data_make.to_padding(text_list, created_list, period=2)
+    padding = data_make.ToPadding(text_list, created_list, period=2)
     text_list, created_list, pad = padding.pad_data()
     train_set, vali_set, test_set = make_dataset.split_data(
         text_list, created_list, pad, label_list, random_state=1
@@ -91,5 +92,8 @@ def test_train() -> None:
         numlabel=max_age, model_path=model_path, max_length=64, period=2
     )
     pred_test, label_test = algorithm.predict(testloader)
-    thresh = evaluate.make_thresh(pred_test, label_test)
-    evaluate.evaluate(pred_test, label_test, thresh)
+    # Convert numpy arrays to lists for evaluation functions
+    pred_test_list = [pred_test[i] for i in range(len(pred_test))]
+    label_test_list = [label_test[i] for i in range(len(label_test))]
+    thresh = evaluate_module.make_thresh(pred_test_list, label_test_list)
+    evaluate_module.evaluate(pred_test_list, label_test_list, thresh)

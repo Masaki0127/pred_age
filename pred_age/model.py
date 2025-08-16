@@ -1,5 +1,6 @@
 import math
 import os
+from typing import Tuple, Union
 
 import numpy as np
 import torch
@@ -10,7 +11,14 @@ from transformers import BertModel
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model=768, dropout=0.2):
+    """位置エンコーディングを行うモジュール.
+
+    Args:
+        d_model: モデルの次元数
+        dropout: ドロップアウト率
+    """
+
+    def __init__(self, d_model: int = 768, dropout: float = 0.2) -> None:
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
         pe = torch.zeros(50, d_model)
@@ -23,13 +31,33 @@ class PositionalEncoding(nn.Module):
         pe = pe.unsqueeze(0).transpose(0, 1)
         self.register_buffer("pe", pe)
 
-    def forward(self, x, created_list):
+    def forward(self, x: torch.Tensor, created_list: torch.Tensor) -> torch.Tensor:
+        """位置エンコーディングを適用したフォワードパス.
+
+        Args:
+            x: 入力テンソル
+            created_list: 作成日時リスト
+
+        Returns:
+            torch.Tensor: 位置エンコーディングが適用されたテンソル
+        """
         x = x + torch.squeeze(self.pe[created_list, :])
         return self.dropout(x)
 
 
-class Bertmulticlassficationmodel(nn.Module):
-    def __init__(self, numlabel, model_name, max_length, period):
+class BertMultiClassificationModel(nn.Module):
+    """マルチラベル分類用のBERTモデル.
+
+    Args:
+        numlabel: ラベル数
+        model_name: 使用するモデル名
+        max_length: 最大シーケンス長
+        period: 期間長
+    """
+
+    def __init__(
+        self, numlabel: int, model_name: str, max_length: int, period: int
+    ) -> None:
         super().__init__()
         self.max_length = max_length
         self.period = period
@@ -43,7 +71,19 @@ class Bertmulticlassficationmodel(nn.Module):
         self.dropout1 = nn.Dropout(p=0.2)
         self.linear = nn.Linear(768, numlabel)
 
-    def forward(self, text, created_list, padding):
+    def forward(
+        self, text: torch.Tensor, created_list: torch.Tensor, padding: torch.Tensor
+    ) -> torch.Tensor:
+        """モデルのフォワードパス.
+
+        Args:
+            text: 入力テキストテンソル
+            created_list: 作成日時テンソル
+            padding: パディングマスクテンソル
+
+        Returns:
+            torch.Tensor: モデルの出力テンソル（2次元: [batch_size, numlabel]）
+        """
         text = torch.reshape(text, (-1, 3, self.max_length))
         x = self.bert_model(
             input_ids=text[:, 0, :],
@@ -73,20 +113,32 @@ class Bertmulticlassficationmodel(nn.Module):
 
 
 class Algorithm:
+    """機械学習アルゴリズムを管理するクラス.
+
+    Args:
+        numlabel: ラベル数
+        model_name: 使用するモデル名
+        max_length: 最大シーケンス長
+        period: 期間長
+        result_path: 結果保存パス
+        model_path: モデル読み込みパス
+        multi_gpu: マルチGPU使用数
+    """
+
     def __init__(
         self,
-        numlabel,
-        model_name="cl-tohoku/bert-base-japanese-v2",
-        max_length=512,
-        period=15,
-        result_path=None,
-        model_path=None,
-        multi_gpu=False,
-    ):
+        numlabel: int,
+        model_name: str = "cl-tohoku/bert-base-japanese-v2",
+        max_length: int = 512,
+        period: int = 15,
+        result_path: Union[str, None] = None,
+        model_path: Union[str, None] = None,
+        multi_gpu: Union[int, bool] = False,
+    ) -> None:
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )  # GPUがつかえたらGPUを利用
-        self.model = Bertmulticlassficationmodel(
+        self.model = BertMultiClassificationModel(
             numlabel, model_name, max_length, period
         )
         if model_path:
@@ -101,7 +153,26 @@ class Algorithm:
             # 保存場所が無かったら作成（中間ディレクトリも含めて安全に作成）
             os.makedirs(self.result_dir, exist_ok=True)
 
-    def train(self, encoder, valid, lr, grad_accum_step=1, early_stop_step=5):
+    def train(
+        self,
+        encoder,
+        valid,
+        lr: float,
+        grad_accum_step: int = 1,
+        early_stop_step: int = 5,
+    ) -> int:
+        """モデルを訓練するメソッド.
+
+        Args:
+            encoder: 訓練データローダー
+            valid: 験証データローダー
+            lr: 学習率
+            grad_accum_step: 勾配累積ステップ数
+            early_stop_step: 早期停止ステップ数
+
+        Returns:
+            int: 最適エポック数
+        """
         self.model.to(self.device)
         optimizer = torch.optim.AdamW(
             params=self.model.parameters(), lr=lr
@@ -171,7 +242,15 @@ class Algorithm:
         return ep - (early_stop_step + 1)
 
     @torch.no_grad()
-    def loss_exact(self, test):
+    def loss_exact(self, test) -> float:
+        """験証データでの损失を計算するメソッド.
+
+        Args:
+            test: テストデータローダー
+
+        Returns:
+            float: 损失値
+        """
         self.model.eval()
         all = 0
         vali_loss = 0
@@ -188,7 +267,15 @@ class Algorithm:
         return vali_loss / len(test)
 
     @torch.no_grad()
-    def predict(self, test):
+    def predict(self, test) -> Tuple[np.ndarray, np.ndarray]:
+        """テストデータで予測を実行するメソッド.
+
+        Args:
+            test: テストデータローダー
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: 予測値と正解ラベル
+        """
         self.model.to(self.device)
         self.model.eval()
         pred_list = None

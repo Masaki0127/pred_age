@@ -10,7 +10,7 @@ alwaysApply: false
 - TODOファイル (例: `todo.md`) を用いて修正した箇所と達成度を可視化
 - testコード (`test.mdc`を参照) を用いてrefactorによるエラー発生を回避
 
-## 手順
+## 手順 (以下日本語で出力すること)
 1. **TODOファイル存在確認**  
    - 無い場合 → ユーザーにrefactorしたいfile/directoryを質問 → 回答をもとにどこをどのようにrefactorすべきか新規で`todo.md`を作る  
    - ある場合 → 既存の`todo.md`を読み込み、refactorすべき箇所を優先順に書き換える
