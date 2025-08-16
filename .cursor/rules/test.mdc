@@ -1,0 +1,11 @@
+---
+description: testを行うためのcommand集
+globs: 
+alwaysApply: false
+---
+```yaml
+test pattern:
+    - name: unit-test
+      description: 単体テストを通過できるかをtest
+      command: make test
+```

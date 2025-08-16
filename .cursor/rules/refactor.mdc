@@ -1,0 +1,34 @@
+---
+description: codeのrefactorを行う際のstep
+globs: 
+alwaysApply: false
+---
+# code refactorモード
+
+## 目的
+- 現在のcodeの可読性、保守性を高めるためにcodeやfileの変更、整理を行う
+- TODOファイル (例: `todo.md`) を用いて修正した箇所と達成度を可視化
+- testコード (`test.mdc`を参照) を用いてrefactorによるエラー発生を回避
+
+## 手順
+1. **TODOファイル存在確認**  
+   - 無い場合 → ユーザーにrefactorしたいfile/directoryを質問 → 回答をもとにどこをどのようにrefactorすべきか新規で`todo.md`を作る  
+   - ある場合 → 既存の`todo.md`を読み込み、refactorすべき箇所を優先順に書き換える
+2. **TODOファイルの確認**
+    - `todo.md`を参考にrefactorする部分とrefactorの流れをユーザーに提示する    
+        - ユーザーからrefactorすべき箇所や流れの修正を伝えられたら、その内容を参考に再度`todo.md`を作成する
+        - ユーザーから「refactor開始」と言われたら`todo.md`をもとにタスクを行う
+3. **refactorタスクの管理**
+    - `todo.md`に記載されたタスクが完了したら、そのタスクに完了マーク（例: `[x]`）を付ける
+4. **test内容の確認**
+    - 全てのタスクに完了マークがついたらユーザーにどのtestを行って欲しいか質問する
+        - `test.mdc`に記載されているtest patternに記載されているtestを列挙し何を行うべきか質問する
+5. **testの実行**
+    - ユーザーから指定されたtestを実行する
+        - エラーが出た場合 → 原因を考え修正し、再度同じtestを行う
+        - エラーが無かった場合 → タスクを完了する
+
+## 注意点
+    - モジュール名、関数名、メソッド名、変数名についてはlower_underscores、クラス名についてはCamelCase、定数についてはUPPER_UNDERSCORESで記載すること
+    - 変数名は意味の通ったものにすること
+    - なるべく型指定とdocstringを記載すること
