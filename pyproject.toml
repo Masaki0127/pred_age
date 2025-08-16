@@ -15,3 +15,12 @@ dependencies = [
     "unidic-lite>=1.0.8",
     "protobuf>=3.20.3",
 ]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pred_age*"]
+exclude = ["tests*", "test_data*", "result*"]
