@@ -4,7 +4,7 @@ import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
 
-from pred_age import label_tr
+from ..utils import label_transforms
 
 
 class CreateDataset(Dataset):
@@ -202,11 +202,11 @@ def make_dataloader(
         DataLoader: 作成されたデータローダー
     """
     if mldl:
-        label = label_tr.multi_label_distribution_learning(
+        label = label_transforms.multi_label_distribution_learning(
             label, size, std=std, scaling=scaling
         )
     else:
-        label = label_tr.one_hot(label, size)
+        label = label_transforms.one_hot(label, size)
     dataset = CreateDataset(text, created, padding, label, max_length, tokenizer)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
     return dataloader
